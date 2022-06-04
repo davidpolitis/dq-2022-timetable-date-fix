@@ -1,13 +1,13 @@
 // ==UserScript==
 // @name        DQ 2022 Timetable Date Fix
-// @namespace   https://davidpolitis.net/
+// @namespace   https://davidpolitis.net
 // @match       https://www.q-dance.com/en/events/defqon-1/defqon-1-weekend-festival-2022/lineup
 // @require     https://momentjs.com/downloads/moment.min.js
 // @require     https://momentjs.com/downloads/moment-timezone-with-data-10-year-range.min.js
 // @grant       none
 // @version     1.0
 // @author      David Politis
-// @description Converts Defqon.1 2022 timetable from local/machine time to CEST
+// @description Converts from local time to CEST
 // ==/UserScript==
 
 const twelveHourTime = true; // set to false to keep times in 24-hour format
@@ -39,9 +39,13 @@ window.onload = function() {
   
   const dayButtons = document.querySelectorAll(".defqon-timetable-overview__btn");
   if (dayButtons) {
+    dayButtons[0].classList.add("activeday");
     for (let i = 0; i < dayButtons.length; ++i) {
-      dayButtons[i].addEventListener("click", function(){
-        convertDQTimes();
+      dayButtons[i].addEventListener("click", function() {
+        if (!dayButtons[i].classList.contains("activeday")) {
+          convertDQTimes();
+          dayButtons[i].classList.add("activeday");
+        }
       });
     }
   }
