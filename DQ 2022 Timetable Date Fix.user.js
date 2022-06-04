@@ -16,37 +16,66 @@ function convertLocalTime(val) {
   return moment(val, "HH:mm").tz("Europe/Amsterdam").format(twelveHourTime ? "hh:mm A" : "HH:mm");
 }
 
-function convertDQTimes() {
-  const timeRows = document.querySelectorAll(".time-table-defqon__row");
-  if (timeRows) {
-    for (let i = 0; i < timeRows.length; ++i) {
-      timeRows[i].textContent = convertLocalTime(timeRows[i].textContent);
-      if (twelveHourTime)
-        timeRows[i].style.right = "10px"; 
-    }
-  }
-  const timeSlots = document.querySelectorAll(".defqon-timeslot__time");
-  if (timeSlots) {
-    for (let i = 0; i < timeSlots.length; ++i) {
-      const timeRanges = timeSlots[i].textContent.split(" - ");
-      timeSlots[i].textContent = convertLocalTime(timeRanges[0]) + " - " + convertLocalTime(timeRanges[1]);
-    }
-  }
+function waitForEl(parent, selector) {
+  return new Promise(resolve => {
+    var existingEls = parent.querySelectorAll(selector);
+    if (existingEls.length)
+      return resolve(existingEls);
+      
+    const observer = new MutationObserver(mutations => {
+      for (const mutation of mutations) {
+        if (mutation.type === 'childList') {
+          if (mutation.addedNodes.length) {
+            const res = [];
+            for (const {addedNodes} of mutations) {
+              for (const node of addedNodes) {
+                if (node.nodeType === 1) {
+                  for (const child of node.querySelectorAll(selector)) {
+                    res.push(child);
+                  }
+                }
+              }
+            }
+            
+            if (res.length) {
+              resolve(res);
+              observer.disconnect();
+            }
+          }
+        }
+      }
+    });
+    observer.observe(parent, { childList: true, subtree: true })
+  });
 }
 
-window.onload = function() {
-  convertDQTimes();
-  
-  const dayButtons = document.querySelectorAll(".defqon-timetable-overview__btn");
-  if (dayButtons) {
-    dayButtons[0].classList.add("activeday");
-    for (let i = 0; i < dayButtons.length; ++i) {
-      dayButtons[i].addEventListener("click", function() {
-        if (!dayButtons[i].classList.contains("activeday")) {
-          convertDQTimes();
-          dayButtons[i].classList.add("activeday");
-        }
-      });
+function convertDQTimes() {
+  waitForEl(document.documentElement, ".time-table-defqon__row").then((timeHeadings) => {
+    for (const timeHeading of timeHeadings) {
+      timeHeading.textContent = convertLocalTime(timeHeading.textContent);
+      if (twelveHourTime)
+        timeHeading.style.right = "10px";
     }
+  });
+  
+  waitForEl(document.documentElement, ".defqon-timeslot__time").then((artistTimes) => {
+    for (const artistTime of artistTimes) {
+      const artistTimeRange = artistTime.textContent.split(" - ");
+      artistTime.textContent = convertLocalTime(artistTimeRange[0]) + " - " + convertLocalTime(artistTimeRange[1]);
+    }
+  });
+}
+
+convertDQTimes();
+
+waitForEl(document.documentElement, ".defqon-timetable-overview__btn").then((dayButtons) => {
+  dayButtons[0].classList.add("activeday");
+  for (const dayButton of dayButtons) {
+    dayButton.addEventListener("click", function() {
+        if (!dayButton.classList.contains("activeday")) {
+          convertDQTimes();
+          dayButton.classList.add("activeday");
+        }
+    });
   }
-};
+});
